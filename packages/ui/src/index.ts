@@ -192,3 +192,6 @@ export type {
     EditablePromptResult,
     EditablePromptOptions,
 } from './EditablePrompt.js';
+
+export { SurveyPrompt } from './SurveyPrompt.js';
+export type { SurveyPromptOptions, SurveyQuestion } from './SurveyPrompt.js';
