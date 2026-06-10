@@ -19,11 +19,12 @@
 //       return <Text>Count: {count}</Text>;
 //   }
 // ─────────────────────────────────────────────────────
-
+import { produce } from 'immer';
 import { useState, useEffect, useRef } from '@termuijs/jsx';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+
 
 // ── Batch Mechanism ──
 
@@ -135,13 +136,10 @@ export interface Computed<U> {
 }
 
 export interface Store<T> {
-    /** Get the current state */
     getState(): T;
-    /** Set partial state (like React's setState) */
     setState: SetState<T>;
-    /** Subscribe to state changes */
+    mutate(recipe: (draft: T) => void): void;
     subscribe(listener: Listener<T>): () => void;
-    /** Destroy the store and remove all listeners */
     destroy(): void;
     /** Create a memoized selector — subscribers are notified only when the derived value changes */
     computed<U>(selector: Selector<T, U>): Computed<U>;
@@ -151,7 +149,6 @@ export interface Store<T> {
     /** Read the state captured at creation */
     getInitialState(): T;
 }
-
 // ── Store Implementation ──
 
 /**
@@ -330,7 +327,17 @@ export function createStore<T extends object>(
             writeTimeout = null;
         }
     };
+const mutate = (recipe: (draft: T) => void): void => {
+    const prevState = state;
+const nextState = produce(state, (draft) => {
+    recipe(draft as T);
+});
+   if (Object.is(prevState, nextState)) {
+        return;
+    } 
+    state = nextState;
 
+<<<<<<< HEAD
     // Initialize state (supports creator functions or plain objects)
     state = typeof creator === 'function'
         ? (creator as StateCreator<T>)(setState, getState)
@@ -393,6 +400,35 @@ export function createStore<T extends object>(
     };
 
     const store: Store<T> = { getState, setState, subscribe, destroy, computed, reset, getInitialState };
+=======
+    if (_batchDepth > 0) {
+        const existing = _batchStores.get(listeners);
+
+        if (!existing) {
+            _batchStores.set(listeners, {
+                prevState,
+                nextState,
+            });
+        } else {
+            existing.nextState = nextState;
+        }
+    } else {
+        for (const listener of listeners) {
+            listener(nextState, prevState);
+        }
+    }
+};
+    // Initialize state
+    state = creator(setState, getState);
+
+    const store: Store<T> = {
+    getState,
+    setState,
+    subscribe,
+    destroy,
+    mutate
+};
+>>>>>>> 8c7b883 (feat(store): add mutate helper)
 
     // Create the hook function
     function useStore(): T;
@@ -405,25 +441,36 @@ export function createStore<T extends object>(
         const selectorRef = useRef(select);
         selectorRef.current = select;
 
-        useEffect(() => {
-            const unsubscribe = store.subscribe((newState) => {
-                const newSelected = selectorRef.current(newState);
-                setSelectedState(newSelected);
-            });
-            return unsubscribe;
-        }, []);
+       useEffect(() => {
+    const unsubscribe = store.subscribe((newState) => {
+        const newSelected = selectorRef.current(newState);
 
-        return selectedState;
-    }
+        setSelectedState(prev =>
+            Object.is(prev, newSelected) 
+            ? prev
+             : newSelected
+        );
+    });
 
+    return unsubscribe;
+}, []);
+return selectedState;
+}
     // Attach store methods to the hook for direct access
     (useStore as any).getState = getState;
+<<<<<<< HEAD
     (useStore as any).setState = setState;
     (useStore as any).subscribe = subscribe;
     (useStore as any).destroy = destroy;
     (useStore as any).computed = computed;
     (useStore as any).reset = reset;
     (useStore as any).getInitialState = getInitialState;
+=======
+(useStore as any).setState = setState;
+(useStore as any).mutate = mutate;
+(useStore as any).subscribe = subscribe;
+(useStore as any).destroy = destroy;
+>>>>>>> 8c7b883 (feat(store): add mutate helper)
 
     return useStore as UseStore<T>;
 }
@@ -435,9 +482,11 @@ export interface UseStore<T> {
     <U>(selector: Selector<T, U>): U;
     getState: GetState<T>;
     setState: SetState<T>;
+    mutate(recipe: (draft: T) => void): void;
     subscribe(listener: Listener<T>): () => void;
     destroy(): void;
     computed<U>(selector: Selector<T, U>): Computed<U>;
     reset(): void;
     getInitialState(): T;
 }
+

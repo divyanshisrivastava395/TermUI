@@ -261,6 +261,7 @@ describe('batch', () => {
     })
 })
 
+<<<<<<< HEAD
 describe('middleware', () => {
     it('middleware is called during setState', () => {
         const spy = vi.fn((prev, update, next) => next(update))
@@ -448,3 +449,40 @@ describe('persistence', () => {
     })
 })
 
+=======
+it('mutate updates state', () => {
+    const useStore = createStore((set) => ({
+        count: 0,
+    }));
+
+    useStore.mutate((state) => {
+        state.count = 5;
+    });
+
+    expect(useStore.getState().count).toBe(5);
+});
+it('mutate updates nested object', () => {
+    const useStore = createStore((set) => ({
+        user: { name: 'A' },
+    }));
+
+    useStore.mutate((state) => {
+        state.user.name = 'B';
+    });
+
+    expect(useStore.getState().user.name).toBe('B');
+});
+it('mutate does not modify original state reference', () => {
+    const useStore = createStore((set) => ({
+        count: 0,
+    }));
+
+    const before = useStore.getState();
+
+    useStore.mutate((state) => {
+        state.count = 10;
+    });
+
+    expect(before.count).toBe(0);
+});
+>>>>>>> 8c7b883 (feat(store): add mutate helper)
