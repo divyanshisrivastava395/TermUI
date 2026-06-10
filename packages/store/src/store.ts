@@ -19,8 +19,9 @@
 //       return <Text>Count: {count}</Text>;
 //   }
 // ─────────────────────────────────────────────────────
-
+import { produce } from 'immer';
 import { useState, useEffect, useRef } from '@termuijs/jsx';
+
 
 // ── Batch Mechanism ──
 
@@ -94,16 +95,12 @@ export type Selector<T, U> = (state: T) => U;
 export type Listener<T> = (state: T, prevState: T) => void;
 
 export interface Store<T> {
-    /** Get the current state */
     getState(): T;
-    /** Set partial state (like React's setState) */
     setState: SetState<T>;
-    /** Subscribe to state changes */
+    mutate(recipe: (draft: T) => void): void;
     subscribe(listener: Listener<T>): () => void;
-    /** Destroy the store and remove all listeners */
     destroy(): void;
 }
-
 // ── Store Implementation ──
 
 /**
@@ -178,11 +175,43 @@ export function createStore<T extends object>(
     const destroy = (): void => {
         listeners.clear();
     };
+const mutate = (recipe: (draft: T) => void): void => {
+    const prevState = state;
+const nextState = produce(state, (draft) => {
+    recipe(draft as T);
+});
+   if (Object.is(prevState, nextState)) {
+        return;
+    } 
+    state = nextState;
 
+    if (_batchDepth > 0) {
+        const existing = _batchStores.get(listeners);
+
+        if (!existing) {
+            _batchStores.set(listeners, {
+                prevState,
+                nextState,
+            });
+        } else {
+            existing.nextState = nextState;
+        }
+    } else {
+        for (const listener of listeners) {
+            listener(nextState, prevState);
+        }
+    }
+};
     // Initialize state
     state = creator(setState, getState);
 
-    const store: Store<T> = { getState, setState, subscribe, destroy };
+    const store: Store<T> = {
+    getState,
+    setState,
+    subscribe,
+    destroy,
+    mutate
+};
 
     // Create the hook function
     function useStore(): T;
@@ -195,22 +224,27 @@ export function createStore<T extends object>(
         const selectorRef = useRef(select);
         selectorRef.current = select;
 
-        useEffect(() => {
-            const unsubscribe = store.subscribe((newState) => {
-                const newSelected = selectorRef.current(newState);
-                setSelectedState(newSelected);
-            });
-            return unsubscribe;
-        }, []);
+       useEffect(() => {
+    const unsubscribe = store.subscribe((newState) => {
+        const newSelected = selectorRef.current(newState);
 
-        return selectedState;
-    }
+        setSelectedState(prev =>
+            Object.is(prev, newSelected) 
+            ? prev
+             : newSelected
+        );
+    });
 
+    return unsubscribe;
+}, []);
+return selectedState;
+}
     // Attach store methods to the hook for direct access
     (useStore as any).getState = getState;
-    (useStore as any).setState = setState;
-    (useStore as any).subscribe = subscribe;
-    (useStore as any).destroy = destroy;
+(useStore as any).setState = setState;
+(useStore as any).mutate = mutate;
+(useStore as any).subscribe = subscribe;
+(useStore as any).destroy = destroy;
 
     return useStore as UseStore<T>;
 }
@@ -222,6 +256,8 @@ export interface UseStore<T> {
     <U>(selector: Selector<T, U>): U;
     getState: GetState<T>;
     setState: SetState<T>;
+    mutate(recipe: (draft: T) => void): void;
     subscribe(listener: Listener<T>): () => void;
     destroy(): void;
 }
+
