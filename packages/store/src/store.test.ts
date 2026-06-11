@@ -448,7 +448,6 @@ describe('persistence', () => {
     })
 })
 
-=======
 it('mutate updates state', () => {
     const useStore = createStore((set) => ({
         count: 0,
@@ -484,4 +483,4 @@ it('mutate does not modify original state reference', () => {
 
     expect(before.count).toBe(0);
 });
->>>>>>> 8c7b883 (feat(store): add mutate helper)
+
