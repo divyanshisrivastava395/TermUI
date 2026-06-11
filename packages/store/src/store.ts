@@ -427,35 +427,7 @@ if (_batchDepth > 0) {
     reset,
     getInitialState,
 };
-=======
-    if (_batchDepth > 0) {
-        const existing = _batchStores.get(listeners);
 
-        if (!existing) {
-            _batchStores.set(listeners, {
-                prevState,
-                nextState,
-            });
-        } else {
-            existing.nextState = nextState;
-        }
-    } else {
-        for (const listener of listeners) {
-            listener(nextState, prevState);
-        }
-    }
-};
-    // Initialize state
-    state = creator(setState, getState);
-
-    const store: Store<T> = {
-    getState,
-    setState,
-    subscribe,
-    destroy,
-    mutate
-};
->>>>>>> 8c7b883 (feat(store): add mutate helper)
 
     // Create the hook function
     function useStore(): T;
