@@ -261,7 +261,6 @@ describe('batch', () => {
     })
 })
 
-<<<<<<< HEAD
 describe('middleware', () => {
     it('middleware is called during setState', () => {
         const spy = vi.fn((prev, update, next) => next(update))
