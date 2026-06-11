@@ -336,8 +336,26 @@ const nextState = produce(state, (draft) => {
         return;
     } 
     state = nextState;
+if (_batchDepth > 0) {
+        const existing = _batchStores.get(listeners);
 
-<<<<<<< HEAD
+        if (!existing) {
+            _batchStores.set(listeners, {
+                prevState,
+                nextState,
+                commit: () => { state = nextState; persistState(); },
+                rollback: (s) => { state = s; },
+            });
+        } else {
+            existing.nextState = nextState;
+        }
+    } else {
+        for (const listener of listeners) {
+            listener(nextState, prevState);
+        }
+        persistState();
+    }
+};
     // Initialize state (supports creator functions or plain objects)
     state = typeof creator === 'function'
         ? (creator as StateCreator<T>)(setState, getState)
@@ -399,7 +417,16 @@ const nextState = produce(state, (draft) => {
         };
     };
 
-    const store: Store<T> = { getState, setState, subscribe, destroy, computed, reset, getInitialState };
+    const store: Store<T> = {
+    getState,
+    setState,
+    mutate,
+    subscribe,
+    destroy,
+    computed,
+    reset,
+    getInitialState,
+};
 =======
     if (_batchDepth > 0) {
         const existing = _batchStores.get(listeners);
@@ -458,19 +485,13 @@ return selectedState;
 }
     // Attach store methods to the hook for direct access
     (useStore as any).getState = getState;
-<<<<<<< HEAD
     (useStore as any).setState = setState;
+    (useStore as any).mutate = mutate;
     (useStore as any).subscribe = subscribe;
     (useStore as any).destroy = destroy;
     (useStore as any).computed = computed;
     (useStore as any).reset = reset;
     (useStore as any).getInitialState = getInitialState;
-=======
-(useStore as any).setState = setState;
-(useStore as any).mutate = mutate;
-(useStore as any).subscribe = subscribe;
-(useStore as any).destroy = destroy;
->>>>>>> 8c7b883 (feat(store): add mutate helper)
 
     return useStore as UseStore<T>;
 }
