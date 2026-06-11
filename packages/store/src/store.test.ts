@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createStore, batch, logger } from './store.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { d } from '../../jsx/dist/createElement-g_-ixPAN.js'
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
@@ -128,7 +129,50 @@ describe('createStore', () => {
         expect(useStore.getState().loading).toBe(false)
     })
 })
+describe('mutate', () => {
+it('mutate updates state', () => {
+    const useStore = createStore({
+        count: 0,
+    })
 
+    useStore.mutate((draft) => {
+        draft.count++
+    })
+
+    expect(useStore.getState().count).toBe(1)
+})
+
+it('mutate updates nested object', () => {
+    const useStore = createStore({
+        user: {
+            name: 'John',
+        },
+    })
+
+    useStore.mutate((draft) => {
+        draft.user.name = 'Alice'
+    })
+
+    expect(useStore.getState().user.name).toBe('Alice')
+})
+
+it('mutate does not modify original state directly', () => {
+    const useStore = createStore({
+        user: {
+            name: 'John',
+        },
+    })
+
+    const before = structuredClone(useStore.getState())
+
+    useStore.mutate((draft) => {
+        draft.user.name = 'Alice'
+    })
+
+    expect(before.user.name).toBe('John')
+    expect(useStore.getState().user.name).toBe('Alice')
+})
+})
 describe('batch', () => {
     it('coalesces multiple setState calls into a single listener notification', async () => {
         const useStore = createStore((set) => ({

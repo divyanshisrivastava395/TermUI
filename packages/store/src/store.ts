@@ -139,6 +139,8 @@ export interface Store<T> {
     getState(): T;
     /** Set partial state (like React's setState) */
     setState: SetState<T>;
+    mutate(recipe: (draft: T) => void): void;
+
     /** Subscribe to state changes */
     subscribe(listener: Listener<T>): () => void;
     /** Destroy the store and remove all listeners */
@@ -391,8 +393,23 @@ export function createStore<T extends object>(
             },
         };
     };
+const mutate = (recipe: (draft: T) => void): void => {
+    const draft = structuredClone(getState());
 
-    const store: Store<T> = { getState, setState, subscribe, destroy, computed, reset, getInitialState };
+    recipe(draft);
+
+    setState(draft);
+};
+    const store: Store<T> = { 
+        getState, 
+        setState, 
+        mutate,
+        subscribe, 
+        destroy, 
+        computed, 
+        reset, 
+        getInitialState
+     };
 
     // Create the hook function
     function useStore(): T;
@@ -419,6 +436,7 @@ export function createStore<T extends object>(
     // Attach store methods to the hook for direct access
     (useStore as any).getState = getState;
     (useStore as any).setState = setState;
+    (useStore as any).mutate = mutate;
     (useStore as any).subscribe = subscribe;
     (useStore as any).destroy = destroy;
     (useStore as any).computed = computed;
@@ -435,6 +453,7 @@ export interface UseStore<T> {
     <U>(selector: Selector<T, U>): U;
     getState: GetState<T>;
     setState: SetState<T>;
+    mutate(recipe: (draft: T) => void): void;
     subscribe(listener: Listener<T>): () => void;
     destroy(): void;
     computed<U>(selector: Selector<T, U>): Computed<U>;
